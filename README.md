@@ -1,10 +1,15 @@
 # GraphQL Bangkok 4.0
 
-- yarn install
-- yarn start
-- Have fun!
+> Hasura Endpoint: https://graphql-asia.herokuapp.com/console
 
-### Control the Game
+### Local setup
+
+```
+- yarn
+- yarn start
+```
+
+### Game Controls
 
 ```graphql
 subscription GetGames {
