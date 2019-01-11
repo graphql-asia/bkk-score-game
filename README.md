@@ -1,6 +1,7 @@
 # GraphQL Bangkok 4.0
 
 > Hasura Endpoint: https://graphql-asia.herokuapp.com/console
+> App Endpoint: https://gql-asia-game.netlify.com
 
 ### Local setup
 
