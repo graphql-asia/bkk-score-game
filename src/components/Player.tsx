@@ -1,14 +1,14 @@
 import * as React from "react"
 import posed from "react-pose"
 
-const PlayerListItem = posed.div({
+export const PlayerAnimated = posed.div({
   enter: {
     y: 0,
     opacity: 1,
     delay: 300,
     transition: {
-      y: { type: "spring", stiffness: 100 },
-      default: { duration: 300 },
+      y: { type: "spring", stiffness: 50 },
+      default: { duration: 150 },
     },
   },
   exit: {
@@ -19,7 +19,7 @@ const PlayerListItem = posed.div({
 })
 
 const Player = ({ id, score }) => (
-  <PlayerListItem
+  <div
     key={id}
     style={{
       background: "#102261",
@@ -44,7 +44,7 @@ const Player = ({ id, score }) => (
     >
       {score}
     </span>
-  </PlayerListItem>
+  </div>
 )
 
 export default Player
