@@ -86,6 +86,8 @@ class Game extends React.Component<GameProps> {
   componentDidMount() {
     const { subscribeToMore, validId } = this.props
 
+    // User subscribeToMore to get more data
+    // when Hasura triggers subscription
     subscribeToMore({
       document: GET_USERS_SUBSCRIPTION,
       variables: {},
@@ -195,10 +197,13 @@ export default class App extends React.Component<AppProps> {
             // Query the current users
             // after loading, pass the users to the game.
             return (
+              // Loads users first, render the game
+              // and pass subscribeToMore to game.
               <Query query={GET_USERS_QUERY}>
                 {({ data, loading, subscribeToMore }) => {
                   if (loading) return <Loader />
 
+                  // Render the game here
                   return (
                     <Game
                       validId={this.state.validId}

@@ -14,13 +14,13 @@ import MuiThemeProvider from "material-ui/styles/MuiThemeProvider"
 import * as injectTapEventPlugin from "react-tap-event-plugin"
 // injectTapEventPlugin()
 
-document.addEventListener(
-  "touchmove",
-  function(e) {
-    e.preventDefault()
-  },
-  { passive: false },
-)
+// document.addEventListener(
+//   "touchmove",
+//   function(e) {
+//     e.preventDefault()
+//   },
+//   { passive: false },
+// )
 
 const cache = new InMemoryCache({})
 
@@ -29,7 +29,7 @@ const httpLink = new HttpLink({
 })
 
 const wsLink = new WebSocketLink({
-  uri: `ws://graphql-asia.herokuapp.com/v1alpha1/graphql`,
+  uri: `wss://graphql-asia.herokuapp.com/v1alpha1/graphql`,
   options: {
     reconnect: true,
   },
