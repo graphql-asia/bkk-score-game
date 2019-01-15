@@ -9,6 +9,7 @@ import posed, { PoseGroup } from "react-pose"
 import CircularProgress from "material-ui/CircularProgress"
 
 import { Query, Mutation, Subscription } from "react-apollo"
+import {sortBy} from "lodash"
 
 const Player = posed.div({
   enter: {
@@ -116,6 +117,132 @@ const GAME_SUBSCRIPTION = gql`
   }
 `
 
+class Players extends React.Component<any>{
+  componentDidMount(){
+    const {subscribeToMore,validId}=this.props
+    subscribeToMore({
+      document: GET_USERS_SUBSCRIPTION,
+      variables: {  },
+      updateQuery: (prev, { subscriptionData }) => {
+        if (!subscriptionData.data) return prev;
+        return {
+          ...prev,
+          users: subscriptionData.data.users.map(tempUser => {
+            if(tempUser.id===validId){
+              return prev.users.find(u => u.id === validId)
+            }else{
+              return tempUser
+            }
+          })
+        }
+      }
+    })
+  }
+  render(){
+    const {data,validId}=this.props
+    return (
+      <React.Fragment>
+        <PoseGroup>
+          {sortBy(data.users,'score').reverse().map(user => (
+            <Player
+              key={user.id}
+              style={{
+                background: "#102261",
+                position: "relative",
+                height: 38,
+                marginBottom: 10,
+                display: "flex",
+                alignItems: "center",
+                paddingLeft: 10,
+                borderRadius: 5,
+              }}
+            >
+              <span style={{ color: "white" }}>{user.id}</span>
+              <span
+                style={{
+                  color: "white",
+                  fontWeight: "bold",
+                  padding: 10,
+                  position: "absolute",
+                  right: 0,
+                }}
+              >
+                {user.score}
+              </span>
+            </Player>
+          ))}
+        </PoseGroup>
+
+        <Mutation
+          mutation={gql`
+            mutation UpdateUser($nickname: String!) {
+              update_users(
+                where: { id: { _eq: $nickname } }
+                _inc: { score: 1 }
+              ) {
+                returning {
+                  ...UserFields
+                }
+              }
+            }
+            ${UserFields}
+          `}
+          variables={{
+            nickname: validId,
+          }}
+          optimisticResponse={{
+            update_users: {
+              __typename: "users_mutation_response",
+              returning: [
+                {
+                  __typename: "users",
+                  id: validId,
+                  score:
+                    data.users.find(
+                      u => u.id === validId,
+                    ).score + 1,
+                },
+              ],
+            },
+          }}
+          update={(cache, { data: { update_users } }) => {
+            cache.writeFragment({
+              fragment: UserFields,
+              id: validId,
+              data: {
+                __typename: "users",
+                id: validId,
+                score:
+                  data.users.find(
+                    u => u.id === validId,
+                  ).score + 1,
+              },
+            })
+            // cache.writeFragment({
+            // id: this.state.nickname,
+            // data: {
+
+            // },
+            // })
+          }}
+        >
+          {scoreUp => (
+            <FloatingButtonWrapper>
+              <PressBounce>
+                <FloatingActionButton
+                  onClick={evt => scoreUp()}
+                  primary
+                >
+                  🎫
+                </FloatingActionButton>
+              </PressBounce>
+            </FloatingButtonWrapper>
+          )}
+        </Mutation>
+      </React.Fragment>
+    )
+  }
+}
 export default class App extends React.Component<AppProps> {
   state = {
     nickname: "",
@@ -172,6 +299,15 @@ export default class App extends React.Component<AppProps> {
                       <TextField
                         type="text"
                         name="nickname"
+                        onKeyPress={e => {
+                          if (e.keyCode === 13 || e.key === 'Enter') {
+                            createUser({
+                              variables: {
+                                nickname: this.state.nickname,
+                              },
+                            })
+                          }
+                        }}
                         onChange={this.setNickname}
                         value={this.state.nickname}
                         inputStyle={{ color: "white", textAlign: "center" }}
@@ -180,8 +316,7 @@ export default class App extends React.Component<AppProps> {
                       <RaisedButton
                         fullWidth
                         disabled={
-                          this.state.nickname === "" ||
-                          this.state.nickname.length < 3
+                          this.state.nickname === ""                          
                         }
                         onClick={() =>
                           createUser({
@@ -201,8 +336,10 @@ export default class App extends React.Component<AppProps> {
 
             return (
               // <Subscription subscription={GET_USERS_SUBSCRIPTION}>
-              <Query query={GET_USERS_QUERY} pollInterval={1000}>
-                {({ data, loading }) => {
+              <Query query={GET_USERS_QUERY} 
+              // pollInterval={1000}
+              >
+                {({ data, loading, subscribeToMore }) => {
                   if (loading)
                     return (
                       <Centered>
@@ -219,105 +356,7 @@ export default class App extends React.Component<AppProps> {
                   }
 
                   return (
-                    <React.Fragment>
-                      <PoseGroup>
-                        {data.users.map(user => (
-                          <Player
-                            key={user.id}
-                            style={{
-                              background: "#102261",
-                              position: "relative",
-                              height: 38,
-                              marginBottom: 10,
-                              display: "flex",
-                              alignItems: "center",
-                              paddingLeft: 10,
-                              borderRadius: 5,
-                            }}
-                          >
-                            <span style={{ color: "white" }}>{user.id}</span>
-                            <span
-                              style={{
-                                color: "white",
-                                fontWeight: "bold",
-                                padding: 10,
-                                position: "absolute",
-                                right: 0,
-                              }}
-                            >
-                              {user.score}
-                            </span>
-                          </Player>
-                        ))}
-                      </PoseGroup>
-
-                      <Mutation
-                        mutation={gql`
-                          mutation UpdateUser($nickname: String!) {
-                            update_users(
-                              where: { id: { _eq: $nickname } }
-                              _inc: { score: 1 }
-                            ) {
-                              returning {
-                                ...UserFields
-                              }
-                            }
-                          }
-                          ${UserFields}
-                        `}
-                        variables={{
-                          nickname: this.state.validId,
-                        }}
-                        optimisticResponse={{
-                          update_users: {
-                            __typename: "users_mutation_response",
-                            returning: [
-                              {
-                                __typename: "users",
-                                id: this.state.validId,
-                                score:
-                                  data.users.find(
-                                    u => u.id === this.state.validId,
-                                  ).score + 1,
-                              },
-                            ],
-                          },
-                        }}
-                        update={(cache, { data: { update_users } }) => {
-                          cache.writeFragment({
-                            fragment: UserFields,
-                            id: this.state.validId,
-                            data: {
-                              __typename: "users",
-                              id: this.state.validId,
-                              score:
-                                data.users.find(
-                                  u => u.id === this.state.validId,
-                                ).score + 1,
-                            },
-                          })
-                          // cache.writeFragment({
-                          // id: this.state.nickname,
-                          // data: {
-
-                          // },
-                          // })
-                        }}
-                      >
-                        {scoreUp => (
-                          <FloatingButtonWrapper>
-                            <PressBounce>
-                              <FloatingActionButton
-                                onClick={evt => scoreUp()}
-                                primary
-                              >
-                                🎫
-                              </FloatingActionButton>
-                            </PressBounce>
-                          </FloatingButtonWrapper>
-                        )}
-                      </Mutation>
-                    </React.Fragment>
+                    <Players validId={this.state.validId} data={data} subscribeToMore={subscribeToMore} />
                   )
                 }}
               </Query>

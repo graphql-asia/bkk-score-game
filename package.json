@@ -8,7 +8,7 @@
     "build": "yarn run clean-dist && webpack -p --config=configs/webpack/prod.js",
     "clean-dist": "rm -f -r -d dist",
     "start": "yarn run start-dev",
-"start-dev": "webpack-dev-server --config=configs/webpack/dev.js"
+    "start-dev": "webpack-dev-server --config=configs/webpack/dev.js"
   },
   "devDependencies": {
     "@babel/cli": "7.1.5",
@@ -68,6 +68,7 @@
     "apollo-utilities": "^1.0.27",
     "graphql": "14.0.2",
     "graphql-tag": "^2.10.0",
+    "lodash": "^4.17.11",
     "material-ui": "^0.20.2",
     "moment-timezone": "^0.5.23",
     "react-adopt": "0.6.0",

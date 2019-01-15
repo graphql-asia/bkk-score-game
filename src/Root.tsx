@@ -12,7 +12,7 @@ import { split } from "apollo-link"
 // Material UI
 import MuiThemeProvider from "material-ui/styles/MuiThemeProvider"
 import * as injectTapEventPlugin from "react-tap-event-plugin"
-injectTapEventPlugin()
+// injectTapEventPlugin()
 
 document.addEventListener(
   "touchmove",
