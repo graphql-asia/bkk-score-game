@@ -188,7 +188,7 @@ export default class App extends React.Component<AppProps> {
             if (!game.playing) {
               return (
                 <p style={{ color: "white", textAlign: "center" }}>
-                  Waiting for players to join... ({data.users.length})
+                  Waiting for players to join...
                 </p>
               )
             }
