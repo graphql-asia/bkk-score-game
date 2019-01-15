@@ -1,55 +1,11 @@
 import * as React from "react"
 import gql from "graphql-tag"
 import "./../assets/scss/App.scss"
-import FloatingActionButton from "material-ui/FloatingActionButton"
-import TextField from "material-ui/TextField"
-import RaisedButton from "material-ui/RaisedButton"
-import Paper from "material-ui/Paper"
-import posed, { PoseGroup } from "react-pose"
-import CircularProgress from "material-ui/CircularProgress"
-
 import { Query, Mutation, Subscription } from "react-apollo"
-import {sortBy} from "lodash"
-
-const Player = posed.div({
-  enter: {
-    y: 0,
-    opacity: 1,
-    delay: 300,
-    transition: {
-      y: { type: "spring", stiffness: 100 },
-      default: { duration: 300 },
-    },
-  },
-  exit: {
-    y: 25,
-    opacity: 0,
-    transition: { duration: 150 },
-  },
-})
-
-const PressBounce = posed.div({
-  pressable: true,
-  init: { scale: 1.3 },
-  press: { scale: 1.6 },
-})
-
-const FloatingButtonWrapper = props => (
-  <div
-    style={{
-      position: "fixed",
-      bottom: "30px",
-      right: 0,
-      left: 0,
-      margin: "auto",
-      width: "100%",
-      display: "flex",
-      justifyContent: "center",
-      fontSize: "20px",
-    }}
-    {...props}
-  />
-)
+import ScoreButton from "./ScoreButton"
+import Loader from "./Loader"
+import EnterNickname from "./EnterNickname"
+import Players from "./Players"
 
 export interface AppProps {}
 
@@ -64,30 +20,22 @@ const Wrapper = props => (
   />
 )
 
-const Centered = props => (
-  <div
-    style={{
-      position: "fixed",
-      margin: "0 auto",
-      left: 0,
-      right: 0,
-      top: 0,
-      bottom: 0,
-      width: "100%",
-      height: "100%",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-    }}
-    {...props}
-  />
-)
-
 const UserFields = gql`
   fragment UserFields on users {
     id
     score
   }
+`
+
+export const CREATE_USER_MUTATION = gql`
+  mutation CreateUser($nickname: String!) {
+    insert_users(objects: [{ id: $nickname, score: 0 }]) {
+      returning {
+        ...UserFields
+      }
+    }
+  }
+  ${UserFields}
 `
 
 const GET_USERS_SUBSCRIPTION = gql`
@@ -117,76 +65,48 @@ const GAME_SUBSCRIPTION = gql`
   }
 `
 
-class Players extends React.Component<any>{
-  componentDidMount(){
-    const {subscribeToMore,validId}=this.props
+const UPDATE_USER_SCORE_MUTATION = gql`
+  mutation UpdateUser($nickname: String!) {
+    update_users(where: { id: { _eq: $nickname } }, _inc: { score: 1 }) {
+      returning {
+        ...UserFields
+      }
+    }
+  }
+  ${UserFields}
+`
+
+interface GameProps {
+  validId: string
+  subscribeToMore: any
+  players: any[]
+}
+
+class Game extends React.Component<GameProps> {
+  componentDidMount() {
+    const { subscribeToMore, validId } = this.props
+
     subscribeToMore({
       document: GET_USERS_SUBSCRIPTION,
-      variables: {  },
+      variables: {},
       updateQuery: (prev, { subscriptionData }) => {
-        if (!subscriptionData.data) return prev;
+        if (!subscriptionData.data) return prev
         return {
-          ...prev,
-          users: subscriptionData.data.users.map(tempUser => {
-            if(tempUser.id===validId){
-              return prev.users.find(u => u.id === validId)
-            }else{
-              return tempUser
-            }
-          })
+          users: subscriptionData.data.users,
         }
-      }
+      },
     })
   }
-  render(){
-    const {data,validId}=this.props
+  render() {
+    const { players, validId } = this.props
     return (
       <React.Fragment>
-        <PoseGroup>
-          {sortBy(data.users,'score').reverse().map(user => (
-            <Player
-              key={user.id}
-              style={{
-                background: "#102261",
-                position: "relative",
-                height: 38,
-                marginBottom: 10,
-                display: "flex",
-                alignItems: "center",
-                paddingLeft: 10,
-                borderRadius: 5,
-              }}
-            >
-              <span style={{ color: "white" }}>{user.id}</span>
-              <span
-                style={{
-                  color: "white",
-                  fontWeight: "bold",
-                  padding: 10,
-                  position: "absolute",
-                  right: 0,
-                }}
-              >
-                {user.score}
-              </span>
-            </Player>
-          ))}
-        </PoseGroup>
+        {/* Renders the list of players */}
+        <Players players={players} />
 
+        {/* Implement score button and updates the cache with optimisticResponse */}
         <Mutation
-          mutation={gql`
-            mutation UpdateUser($nickname: String!) {
-              update_users(
-                where: { id: { _eq: $nickname } }
-                _inc: { score: 1 }
-              ) {
-                returning {
-                  ...UserFields
-                }
-              }
-            }
-            ${UserFields}
-          `}
+          mutation={UPDATE_USER_SCORE_MUTATION}
           variables={{
             nickname: validId,
           }}
@@ -197,14 +117,12 @@ class Players extends React.Component<any>{
                 {
                   __typename: "users",
                   id: validId,
-                  score:
-                    data.users.find(
-                      u => u.id === validId,
-                    ).score + 1,
+                  score: players.find(u => u.id === validId).score + 1,
                 },
               ],
             },
           }}
+          // Update the local cache
           update={(cache, { data: { update_users } }) => {
             cache.writeFragment({
               fragment: UserFields,
@@ -212,37 +130,18 @@ class Players extends React.Component<any>{
               data: {
                 __typename: "users",
                 id: validId,
-                score:
-                  data.users.find(
-                    u => u.id === validId,
-                  ).score + 1,
+                score: players.find(u => u.id === validId).score + 1,
               },
             })
-            // cache.writeFragment({
-            // id: this.state.nickname,
-            // data: {
-
-            // },
-            // })
           }}
         >
-          {scoreUp => (
-            <FloatingButtonWrapper>
-              <PressBounce>
-                <FloatingActionButton
-                  onClick={evt => scoreUp()}
-                  primary
-                >
-                  🎫
-                </FloatingActionButton>
-              </PressBounce>
-            </FloatingButtonWrapper>
-          )}
+          {scoreUp => <ScoreButton onClick={scoreUp} />}
         </Mutation>
       </React.Fragment>
     )
   }
 }
+
 export default class App extends React.Component<AppProps> {
   state = {
     nickname: "",
@@ -255,112 +154,60 @@ export default class App extends React.Component<AppProps> {
     })
   }
 
+  setValidId = validId => {
+    this.setState({
+      validId,
+    })
+  }
+
   render() {
+    if (this.state.validId === "") {
+      return (
+        <Wrapper>
+          <EnterNickname
+            nickname={this.state.nickname}
+            setValidId={this.setValidId}
+            setNickname={this.setNickname}
+          />
+        </Wrapper>
+      )
+    }
+
     return (
       <Wrapper>
+        {/* Subscribe to the game */}
         <Subscription subscription={GAME_SUBSCRIPTION}>
           {({ loading, data }) => {
-            if (loading)
-              return (
-                <Centered>
-                  <CircularProgress />
-                </Centered>
-              )
+            if (loading) return <Loader />
+
             const game = data.games[0]
 
-            if (this.state.validId === "") {
+            // Check if the game started
+            if (!game.playing) {
               return (
-                <Mutation
-                  mutation={gql`
-                    mutation CreateUser($nickname: String!) {
-                      insert_users(objects: [{ id: $nickname, score: 0 }]) {
-                        returning {
-                          ...UserFields
-                        }
-                      }
-                    }
-                    ${UserFields}
-                  `}
-                  onCompleted={data => {
-                    console.log("User saved...", data)
-                    this.setState({
-                      validId: data.insert_users.returning[0].id,
-                    })
-                  }}
-                  onError={error => {
-                    alert("Error creating user. Maybe already exists?")
-                  }}
-                >
-                  {(createUser, result) => (
-                    <div>
-                      <p style={{ color: "white", textAlign: "center" }}>
-                        Enter your nickname
-                      </p>
-                      <TextField
-                        type="text"
-                        name="nickname"
-                        onKeyPress={e => {
-                          if (e.keyCode === 13 || e.key === 'Enter') {
-                            createUser({
-                              variables: {
-                                nickname: this.state.nickname,
-                              },
-                            })
-                          }
-                        }}
-                        onChange={this.setNickname}
-                        value={this.state.nickname}
-                        inputStyle={{ color: "white", textAlign: "center" }}
-                        style={{ width: "100%" }}
-                      />
-                      <RaisedButton
-                        fullWidth
-                        disabled={
-                          this.state.nickname === ""                          
-                        }
-                        onClick={() =>
-                          createUser({
-                            variables: {
-                              nickname: this.state.nickname,
-                            },
-                          })
-                        }
-                      >
-                        Join Game
-                      </RaisedButton>
-                    </div>
-                  )}
-                </Mutation>
+                <p style={{ color: "white", textAlign: "center" }}>
+                  Waiting for players to join... ({data.users.length})
+                </p>
               )
             }
 
+            // return
+            // Query the current users
+            // after loading, pass the users to the game.
             return (
-              // <Subscription subscription={GET_USERS_SUBSCRIPTION}>
-              <Query query={GET_USERS_QUERY} 
-              // pollInterval={1000}
-              >
+              <Query query={GET_USERS_QUERY}>
                 {({ data, loading, subscribeToMore }) => {
-                  if (loading)
-                    return (
-                      <Centered>
-                        <CircularProgress />
-                      </Centered>
-                    )
-
-                  if (!game.playing) {
-                    return (
-                      <p style={{ color: "white", textAlign: "center" }}>
-                        Waiting for players to join... ({data.users.length})
-                      </p>
-                    )
-                  }
+                  if (loading) return <Loader />
 
                   return (
-                    <Players validId={this.state.validId} data={data} subscribeToMore={subscribeToMore} />
+                    <Game
+                      validId={this.state.validId}
+                      players={data.users}
+                      subscribeToMore={subscribeToMore}
+                    />
                   )
                 }}
               </Query>
-              // </Subscription>
             )
           }}
         </Subscription>

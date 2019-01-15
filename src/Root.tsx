@@ -26,13 +26,10 @@ const cache = new InMemoryCache({})
 
 const httpLink = new HttpLink({
   uri: "https://graphql-asia.herokuapp.com/v1alpha1/graphql",
-  headers: {
-    "X-Hasura-Access-Key": "luc45hasura",
-  },
 })
 
 const wsLink = new WebSocketLink({
-  uri: `wss://graphql-asia.herokuapp.com/v1alpha1/graphql`,
+  uri: `ws://graphql-asia.herokuapp.com/v1alpha1/graphql`,
   options: {
     reconnect: true,
   },
